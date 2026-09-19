@@ -1,0 +1,30 @@
+<main class="shell">
+  <section class="toolbar">
+    <div>
+      <p class="eyebrow">Reto 4</p>
+      <h1>Gestion de empleados</h1>
+    </div>
+    <button type="button" class="ghost" (click)="reloadEmployees()" [disabled]="loading$ | async">
+      Actualizar
+    </button>
+  </section>
+
+  <section class="workspace">
+    <app-employee-form
+      [employee]="selectedEmployee"
+      [loading]="(loading$ | async) ?? false"
+      (save)="saveEmployee($event)"
+      (cancel)="clearSelection()"
+    />
+
+    <app-employee-list
+      *ngIf="employees$ | async as employees"
+      [employees]="employees"
+      [loading]="(loading$ | async) ?? false"
+      [error]="(error$ | async) ?? null"
+      (edit)="editEmployee($event)"
+      (delete)="deleteEmployee($event)"
+      (clearError)="clearError()"
+    />
+  </section>
+</main>
