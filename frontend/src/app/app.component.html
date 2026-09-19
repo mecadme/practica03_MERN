@@ -1,0 +1,91 @@
+<main class="shell">
+  <section class="toolbar">
+    <div>
+      <p class="eyebrow">Reto 3</p>
+      <h1>Gestion de empleados</h1>
+    </div>
+    <button type="button" class="ghost" (click)="reloadEmployees()" [disabled]="loading$ | async">
+      Actualizar
+    </button>
+  </section>
+
+  <section class="workspace">
+    <form class="panel form-panel" (ngSubmit)="saveEmployee()" #employeeForm="ngForm">
+      <h2>{{ editingId ? 'Editar empleado' : 'Nuevo empleado' }}</h2>
+
+      <label>
+        Nombre
+        <input name="nombre" type="text" [(ngModel)]="form.nombre" required minlength="3" maxlength="100">
+      </label>
+
+      <label>
+        Cargo
+        <input name="cargo" type="text" [(ngModel)]="form.cargo" required minlength="2" maxlength="100">
+      </label>
+
+      <label>
+        Departamento
+        <input name="departamento" type="text" [(ngModel)]="form.departamento" required minlength="2" maxlength="100">
+      </label>
+
+      <label>
+        Sueldo
+        <input name="sueldo" type="number" [(ngModel)]="form.sueldo" required min="1">
+      </label>
+
+      <div class="actions">
+        <button type="submit" [disabled]="employeeForm.invalid || (loading$ | async)">
+          {{ editingId ? 'Guardar' : 'Crear' }}
+        </button>
+        <button type="button" class="ghost" (click)="resetForm()" [disabled]="loading$ | async">
+          Limpiar
+        </button>
+      </div>
+    </form>
+
+    <section class="panel list-panel">
+      <div class="list-header">
+        <div>
+          <h2>Equipo</h2>
+          <p>{{ (employees$ | async)?.length ?? 0 }} empleados registrados</p>
+        </div>
+        <span class="status" *ngIf="loading$ | async">Sincronizando</span>
+      </div>
+
+      <div class="alert" *ngIf="error$ | async as error">
+        <span>{{ error }}</span>
+        <button type="button" class="link" (click)="clearError()">Cerrar</button>
+      </div>
+
+      <div class="table-wrap" *ngIf="employees$ | async as employees">
+        <table *ngIf="employees.length; else emptyState">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Cargo</th>
+              <th>Departamento</th>
+              <th>Sueldo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let employee of employees; trackBy: trackEmployee">
+              <td>{{ employee.nombre }}</td>
+              <td>{{ employee.cargo }}</td>
+              <td>{{ employee.departamento }}</td>
+              <td>{{ employee.sueldo | currency:'USD':'symbol':'1.0-0' }}</td>
+              <td class="row-actions">
+                <button type="button" class="ghost" (click)="editEmployee(employee)">Editar</button>
+                <button type="button" class="danger" (click)="deleteEmployee(employee)">Eliminar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #emptyState>
+        <p class="empty">No hay empleados cargados.</p>
+      </ng-template>
+    </section>
+  </section>
+</main>
