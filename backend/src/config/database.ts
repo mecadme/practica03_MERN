@@ -1,17 +1,19 @@
 import mongoose from 'mongoose';
 
 export const connectDatabase = async (): Promise<void> => {
-  const MONGO_URI =
-    process.env.MONGO_URI ||
-    'mongodb://admin:admin123@127.0.0.1:27017/usuarios_db?authSource=admin';
+  const MONGO_URI = process.env.MONGO_URI;
+
+  if (!MONGO_URI) {
+    console.error('MONGO_URI no está definida');
+    process.exit(1);
+  }
 
   try {
     await mongoose.connect(MONGO_URI);
+
+    console.log('Conectado correctamente a MongoDB');
   } catch (error) {
-    try {
-      await mongoose.connect('mongodb://127.0.0.1:27017/usuarios_db');
-    } catch {
-      process.exit(1);
-    }
+    console.error('Error al conectar con MongoDB:', error);
+    process.exit(1);
   }
 };
