@@ -1,0 +1,32 @@
+<form class="panel form-panel" (ngSubmit)="submit()" #employeeForm="ngForm">
+  <h2>{{ editingId ? 'Editar empleado' : 'Nuevo empleado' }}</h2>
+
+  <label>
+    Nombre
+    <input name="nombre" type="text" [(ngModel)]="form.nombre" required minlength="3" maxlength="100">
+  </label>
+
+  <label>
+    Cargo
+    <input name="cargo" type="text" [(ngModel)]="form.cargo" required minlength="2" maxlength="100">
+  </label>
+
+  <label>
+    Departamento
+    <input name="departamento" type="text" [(ngModel)]="form.departamento" required minlength="2" maxlength="100">
+  </label>
+
+  <label>
+    Sueldo
+    <input name="sueldo" type="number" [(ngModel)]="form.sueldo" required min="1">
+  </label>
+
+  <div class="actions">
+    <button type="submit" [disabled]="employeeForm.invalid || loading">
+      {{ editingId ? 'Guardar' : 'Crear' }}
+    </button>
+    <button type="button" class="ghost" (click)="reset()" [disabled]="loading">
+      Limpiar
+    </button>
+  </div>
+</form>

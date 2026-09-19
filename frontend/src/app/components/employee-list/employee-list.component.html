@@ -1,0 +1,44 @@
+<section class="panel list-panel">
+  <div class="list-header">
+    <div>
+      <h2>Equipo</h2>
+      <p>{{ employees.length }} empleados registrados</p>
+    </div>
+    <span class="status" *ngIf="loading">Sincronizando</span>
+  </div>
+
+  <div class="alert" *ngIf="error as currentError">
+    <span>{{ currentError }}</span>
+    <button type="button" class="link" (click)="clearError.emit()">Cerrar</button>
+  </div>
+
+  <div class="table-wrap">
+    <table *ngIf="employees.length; else emptyState">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Cargo</th>
+          <th>Departamento</th>
+          <th>Sueldo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let employee of employees; trackBy: trackEmployee">
+          <td>{{ employee.nombre }}</td>
+          <td>{{ employee.cargo }}</td>
+          <td>{{ employee.departamento }}</td>
+          <td>{{ employee.sueldo | currency:'USD':'symbol':'1.0-0' }}</td>
+          <td class="row-actions">
+            <button type="button" class="ghost" (click)="edit.emit(employee)">Editar</button>
+            <button type="button" class="danger" (click)="delete.emit(employee)">Eliminar</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #emptyState>
+    <p class="empty">No hay empleados cargados.</p>
+  </ng-template>
+</section>

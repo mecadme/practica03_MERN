@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, finalize, map, switchMap } from 'rxjs';
+import { BehaviorSubject, finalize, map, Observable, switchMap } from 'rxjs';
 import type { ApiResponse, Employee, EmployeePayload } from '../models/employee.model';
 
 @Injectable({
@@ -75,8 +75,10 @@ export class EmployeeService {
     this.errorSubject.next(null);
   }
 
-  private fetchEmployees() {
-    return this.http.get<ApiResponse<Employee[]>>(this.apiUrl).pipe(map(response => response.data ?? []));
+  private fetchEmployees(): Observable<ReadonlyArray<Employee>> {
+    return this.http
+      .get<ApiResponse<unknown>>(this.apiUrl)
+      .pipe(map(response => this.normalizeEmployees(response.data)));
   }
 
   private startRequest(): void {
@@ -91,5 +93,86 @@ export class EmployeeService {
     }
 
     return 'No se pudo completar la operacion solicitada';
+  }
+
+  private normalizeEmployees(data: unknown): ReadonlyArray<Employee> {
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    return data
+      .map(employee => this.normalizeEmployee(employee))
+      .filter((employee): employee is Employee => employee !== null);
+  }
+
+  private normalizeEmployee(value: unknown): Employee | null {
+    if (!this.isRecord(value)) {
+      return null;
+    }
+
+    const nombre = this.toText(value['nombre']);
+    const cargo = this.toText(value['cargo']);
+    const departamento = this.toText(value['departamento']);
+    const sueldo = this.toNumber(value['sueldo']);
+
+    if (!nombre || !cargo || !departamento || sueldo === null) {
+      return null;
+    }
+
+    const employee: Employee = {
+      nombre,
+      cargo,
+      departamento,
+      sueldo
+    };
+
+    const id = this.toOptionalText(value['id']);
+    const mongoId = this.toOptionalText(value['_id']);
+    const createdAt = this.toOptionalText(value['createdAt']);
+    const updatedAt = this.toOptionalText(value['updatedAt']);
+
+    if (id) {
+      employee.id = id;
+    }
+
+    if (mongoId) {
+      employee._id = mongoId;
+    }
+
+    if (createdAt) {
+      employee.createdAt = createdAt;
+    }
+
+    if (updatedAt) {
+      employee.updatedAt = updatedAt;
+    }
+
+    return employee;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private toText(value: unknown): string {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  private toOptionalText(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      const trimmedValue = value.trim();
+      return trimmedValue || undefined;
+    }
+
+    if (typeof value === 'number') {
+      return String(value);
+    }
+
+    return undefined;
+  }
+
+  private toNumber(value: unknown): number | null {
+    const numberValue = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(numberValue) ? numberValue : null;
   }
 }

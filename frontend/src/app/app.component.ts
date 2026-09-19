@@ -1,20 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import type { Employee, EmployeePayload } from './models/employee.model';
+import type { Employee } from './models/employee.model';
 import { EmployeeService } from './services/employee.service';
-
-const emptyForm = (): EmployeePayload => ({
-  nombre: '',
-  cargo: '',
-  departamento: '',
-  sueldo: 0
-});
+import { EmployeeFormComponent, type EmployeeFormSubmit } from './components/employee-form/employee-form.component';
+import { EmployeeListComponent } from './components/employee-list/employee-list.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, EmployeeFormComponent, EmployeeListComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -23,8 +17,7 @@ export class AppComponent implements OnInit {
   readonly loading$ = this.employeeService.loading$;
   readonly error$ = this.employeeService.error$;
 
-  form: EmployeePayload = emptyForm();
-  editingId: string | null = null;
+  selectedEmployee: Employee | null = null;
 
   constructor(private readonly employeeService: EmployeeService) {}
 
@@ -32,24 +25,19 @@ export class AppComponent implements OnInit {
     this.employeeService.loadEmployees();
   }
 
-  saveEmployee(): void {
-    const payload = {
-      ...this.form,
-      sueldo: Number(this.form.sueldo)
-    };
-
-    if (this.editingId) {
-      this.employeeService.updateEmployee(this.editingId, payload);
+  saveEmployee(event: EmployeeFormSubmit): void {
+    if (event.id) {
+      this.employeeService.updateEmployee(event.id, event.payload);
     } else {
-      this.employeeService.createEmployee(payload);
+      this.employeeService.createEmployee(event.payload);
     }
 
-    this.resetForm();
+    this.clearSelection();
   }
 
   editEmployee(employee: Employee): void {
-    this.editingId = this.employeeId(employee);
-    this.form = {
+    this.selectedEmployee = {
+      ...employee,
       nombre: employee.nombre,
       cargo: employee.cargo,
       departamento: employee.departamento,
@@ -61,12 +49,12 @@ export class AppComponent implements OnInit {
     const id = this.employeeId(employee);
     if (id) {
       this.employeeService.deleteEmployee(id);
+      this.clearSelection();
     }
   }
 
-  resetForm(): void {
-    this.form = emptyForm();
-    this.editingId = null;
+  clearSelection(): void {
+    this.selectedEmployee = null;
   }
 
   reloadEmployees(): void {
@@ -77,11 +65,7 @@ export class AppComponent implements OnInit {
     this.employeeService.clearError();
   }
 
-  trackEmployee(_index: number, employee: Employee): string {
-    return this.employeeId(employee) ?? employee.nombre;
-  }
-
-  private employeeId(employee: Employee): string | null {
-    return employee.id ?? employee._id ?? null;
+  private employeeId(employee: Employee | null | undefined): string | null {
+    return employee?.id ?? employee?._id ?? null;
   }
 }
