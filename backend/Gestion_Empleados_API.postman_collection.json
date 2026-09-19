@@ -1,0 +1,1039 @@
+{
+  "info": {
+    "_postman_id": "e4a25b1c-7f89-4a92-91e3-2e78c93b6e14",
+    "name": "Práctica 03 - MEAN Stack (Gestión de Empleados)",
+    "description": "Colección oficial de pruebas de API para la **Práctica 03: Stack MEAN** (Maestría en Software - Patrones de Diseño de APIs - Universidad Politécnica Salesiana).\n\n### 🎯 Objetivos de la Colección\n1. **Validación CRUD Completa:** Comprobar las 5 operaciones fundamentales bajo contratos API REST semánticos (`GET`, `POST`, `GET :id`, `PUT :id`, `DELETE :id`).\n2. **Blindaje Perimetral y Contratos DTO (Reto 2):** Pruebas negativas y de frontera con **Zod** (validación de campos requeridos, tipos, longitud de nombres y sueldos no negativos).\n3. **Verificación de Patrón Response Wrapper:** Comprobar salidas unificadas tanto para transacciones exitosas como para excepciones del sistema.\n4. **Automatización Dinámica:** Extracción automática de identificadores de MongoDB (`_id`) entre peticiones usando variables de colección (`pm.collectionVariables`).\n\n### ⚙️ Variables de Colección\n- `baseUrl`: `http://localhost:3000` (Servidor backend Express/Node.js)\n- `apiVersion`: `api/v1` (Prefijo de versionado de API)\n- `resource`: `empleados` (Recurso principal; puede cambiarse a `employees`)\n- `employeeId`: ID de empleado capturado dinámicamente durante la ejecución\n- `invalidEmployeeId`: ID con formato ObjectId válido pero inexistente en la BD\n- `malformedEmployeeId`: ID con formato inválido para verificar validaciones perimetrales",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "URL base del servidor backend de Express"
+    },
+    {
+      "key": "apiVersion",
+      "value": "api/v1",
+      "type": "string",
+      "description": "Prefijo de versión de la API REST"
+    },
+    {
+      "key": "resource",
+      "value": "empleados",
+      "type": "string",
+      "description": "Nombre del recurso ('empleados' en código base o 'employees' según refactorización del README)"
+    },
+    {
+      "key": "employeeId",
+      "value": "",
+      "type": "string",
+      "description": "Identificador único (_id de MongoDB) capturado dinámicamente en las pruebas"
+    },
+    {
+      "key": "invalidEmployeeId",
+      "value": "60c72b2f9b1d8b2bad000000",
+      "type": "string",
+      "description": "ID de 24 caracteres hexadecimales (ObjectId sintácticamente válido pero inexistente)"
+    },
+    {
+      "key": "malformedEmployeeId",
+      "value": "id-invalido-123",
+      "type": "string",
+      "description": "ID con formato no hexadecimal para probar validaciones perimetrales de Zod / cast error"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Flujo CRUD Completo (Happy Path)",
+      "description": "Conjunto de peticiones secuenciales que cubren las 5 operaciones fundamentales del contrato RESTful en condiciones normales de operación.",
+      "item": [
+        {
+          "name": "01. Listar Empleados (GET Inicial)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código de respuesta HTTP 200 OK",
+                  "pm.test(\"Estado HTTP es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Validar cabecera Content-Type JSON",
+                  "pm.test(\"Cabecera Content-Type es application/json\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});",
+                  "",
+                  "// Validar tiempo de respuesta óptimo (menor a 1500ms)",
+                  "pm.test(\"Tiempo de respuesta menor a 1500 ms\", function () {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(1500);",
+                  "});",
+                  "",
+                  "// Validar estructura de datos y extraer employeeId si existen registros",
+                  "pm.test(\"Cuerpo de respuesta es un arreglo o envoltorio con datos\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const list = Array.isArray(jsonData) ? jsonData : (jsonData.data || []);",
+                  "    pm.expect(list).to.be.an(\"array\");",
+                  "    ",
+                  "    if (list.length > 0) {",
+                  "        const lastItem = list[list.length - 1];",
+                  "        const id = lastItem._id || lastItem.id;",
+                  "        if (id) {",
+                  "            pm.collectionVariables.set(\"employeeId\", id);",
+                  "            console.log(\"[INFO] employeeId inicial asignado desde lista:\", id);",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Consulta el listado general de empleados registrados en MongoDB.\n\nSoporta tanto la respuesta directa de Mongoose (`[ {...} ]`) como la respuesta encapsulada por el Response Wrapper Pattern (`{ success: true, data: [ {...} ] }`). Si existen registros previos, guarda automáticamente el ID en `employeeId`."
+          },
+          "response": []
+        },
+        {
+          "name": "02. Crear Empleado (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP exitoso (200 OK o 201 Created)",
+                  "pm.test(\"Estado HTTP es 200 OK o 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "// Validar cabecera Content-Type JSON",
+                  "pm.test(\"Cabecera Content-Type es application/json\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});",
+                  "",
+                  "// Validar contenido de la respuesta y capturar ID generado",
+                  "pm.test(\"Empleado creado exitosamente y captura de ID\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    ",
+                  "    // Soporta: { status: 'Empleado guardado' }, objeto directo { _id: '...' } o wrapper { success: true, data: { _id: '...' } }",
+                  "    if (jsonData.status) {",
+                  "        pm.expect(jsonData.status).to.include(\"guardado\");",
+                  "    }",
+                  "    if (jsonData.success !== undefined) {",
+                  "        pm.expect(jsonData.success).to.be.true;",
+                  "    }",
+                  "    ",
+                  "    const createdId = (jsonData.data && (jsonData.data._id || jsonData.data.id)) || jsonData._id || jsonData.id;",
+                  "    if (createdId) {",
+                  "        pm.collectionVariables.set(\"employeeId\", createdId);",
+                  "        console.log(\"[INFO] employeeId capturado directamente del POST:\", createdId);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Andrés Mendoza\",\n  \"cargo\": \"Arquitecto de Software\",\n  \"departamento\": \"Innovación\",\n  \"sueldo\": 4500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Registra un nuevo empleado en la base de datos validando estructuralmente su identidad.\n\nPayload de prueba basado en el contrato oficial de la guía y README:\n- `nombre`: \"Andrés Mendoza\"\n- `cargo`: \"Arquitecto de Software\"\n- `departamento`: \"Innovación\"\n- `sueldo`: 4500"
+          },
+          "response": []
+        },
+        {
+          "name": "03. Listar Empleados para Sincronizar ID (GET Post-Creación)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar estado 200 OK",
+                  "pm.test(\"Estado HTTP es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Localizar el empleado recién creado y sincronizar employeeId",
+                  "pm.test(\"Sincronizar employeeId con el último registro creado\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const list = Array.isArray(jsonData) ? jsonData : (jsonData.data || []);",
+                  "    pm.expect(list).to.be.an(\"array\").that.is.not.empty;",
+                  "    ",
+                  "    // Buscar el empleado creado por nombre",
+                  "    const match = list.slice().reverse().find(e => e.nombre === \"Andrés Mendoza\") || list[list.length - 1];",
+                  "    const id = match._id || match.id;",
+                  "    pm.expect(id).to.be.a(\"string\");",
+                  "    pm.collectionVariables.set(\"employeeId\", id);",
+                  "    console.log(\"[INFO] employeeId sincronizado para siguientes operaciones:\", id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Garantiza que la variable `employeeId` quede vinculada al ID real generado por MongoDB, indispensable cuando el código base legacy responde únicamente `{ status: 'Empleado guardado' }` sin incluir el documento insertado."
+          },
+          "response": []
+        },
+        {
+          "name": "04. Consulta Atómica por ID (GET :id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar estado HTTP 200 OK",
+                  "pm.test(\"Estado HTTP es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Validar integridad estructural del empleado recuperado",
+                  "pm.test(\"El registro contiene los campos del contrato de empleado\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const emp = jsonData.data || jsonData;",
+                  "    ",
+                  "    pm.expect(emp).to.be.an(\"object\");",
+                  "    pm.expect(emp).to.have.property(\"nombre\");",
+                  "    pm.expect(emp).to.have.property(\"cargo\");",
+                  "    pm.expect(emp).to.have.property(\"departamento\");",
+                  "    pm.expect(emp).to.have.property(\"sueldo\");",
+                  "    ",
+                  "    const id = emp._id || emp.id;",
+                  "    const currentId = pm.collectionVariables.get(\"employeeId\");",
+                  "    if (id && currentId) {",
+                  "        pm.expect(id).to.eql(currentId);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Ejecuta una consulta atómica por identificador único (ID).\n\nCumple con la operación 3 de la guía de laboratorio: 'Consulta atómica por identificador único (ID)'."
+          },
+          "response": []
+        },
+        {
+          "name": "05. Actualizar Empleado (PUT :id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar estado HTTP 200 OK",
+                  "pm.test(\"Estado HTTP es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Validar respuesta de actualización",
+                  "pm.test(\"Confirmación de actualización exitosa\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    ",
+                  "    if (jsonData.status) {",
+                  "        pm.expect(jsonData.status).to.include(\"actualizado\");",
+                  "    }",
+                  "    if (jsonData.success !== undefined) {",
+                  "        pm.expect(jsonData.success).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Andrés Mendoza\",\n  \"cargo\": \"Lead Solutions Architect\",\n  \"departamento\": \"Innovación y Arquitectura\",\n  \"sueldo\": 5500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Actualización parcial o total mediante mutaciones seguras.\n\nModifica el cargo a 'Lead Solutions Architect', departamento a 'Innovación y Arquitectura' y aumenta el sueldo a 5500."
+          },
+          "response": []
+        },
+        {
+          "name": "06. Eliminar Empleado (DELETE :id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar estado HTTP 200 OK",
+                  "pm.test(\"Estado HTTP es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Validar respuesta de eliminación",
+                  "pm.test(\"Confirmación de eliminación exitosa\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    ",
+                  "    if (jsonData.status) {",
+                  "        pm.expect(jsonData.status).to.include(\"eliminado\");",
+                  "    }",
+                  "    if (jsonData.success !== undefined) {",
+                  "        pm.expect(jsonData.success).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Eliminación física o lógica mediante el identificador único del empleado."
+          },
+          "response": []
+        },
+        {
+          "name": "07. Verificar Post-Eliminación (GET :id - Idempotencia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar que el recurso eliminado ya no se encuentra (404 Not Found o respuesta nula)",
+                  "pm.test(\"Recurso eliminado retorna 404 Not Found o cuerpo nulo\", function () {",
+                  "    if (pm.response.code === 404) {",
+                  "        pm.response.to.have.status(404);",
+                  "    } else if (pm.response.code === 200) {",
+                  "        const jsonData = pm.response.json();",
+                  "        const data = jsonData.data !== undefined ? jsonData.data : jsonData;",
+                  "        pm.expect(data).to.satisfy(val => val === null || Object.keys(val).length === 0);",
+                  "    } else {",
+                  "        pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Verifica que tras la eliminación física, una consulta por el mismo ID retorne 404 Not Found (en arquitectura refactorizada con DTO/Response Wrapper) o un valor nulo/vacío."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Validación Perimetral DTO y Manejo de Errores (Reto 2 - Zod)",
+      "description": "Pruebas perimetrales diseñadas para evaluar la intercepción de esquemas declarativos Zod (`employee.dto.ts`), rechazo anticipado en la capa HTTP y el Response Wrapper Pattern.",
+      "item": [
+        {
+          "name": "01. Validación DTO - Nombre Demasiado Corto (POST 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP 400 Bad Request",
+                  "pm.test(\"Servidor rechaza con 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validar que la respuesta reporte el error de validación",
+                  "pm.test(\"Cuerpo de error estructurado con detalle del campo 'nombre'\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const rawText = JSON.stringify(jsonData).toLowerCase();",
+                  "    pm.expect(rawText).to.include(\"nombre\");",
+                  "    ",
+                  "    if (jsonData.success !== undefined) {",
+                  "        pm.expect(jsonData.success).to.be.false;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"An\",\n  \"cargo\": \"Developer\",\n  \"departamento\": \"TI\",\n  \"sueldo\": 2500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Caso de prueba extraído textualmente del README:\n`nombre: \"An\"` viola la regla de longitud mínima (mínimo 3 caracteres).\n\nResultado esperado: `400 Bad Request` antes de llegar al controlador."
+          },
+          "response": []
+        },
+        {
+          "name": "02. Validación DTO - Sueldo Negativo (POST 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP 400 Bad Request",
+                  "pm.test(\"Servidor rechaza con 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validar reporte de campo sueldo",
+                  "pm.test(\"Cuerpo reporta violación en regla de 'sueldo'\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const rawText = JSON.stringify(jsonData).toLowerCase();",
+                  "    pm.expect(rawText).to.include(\"sueldo\");",
+                  "    ",
+                  "    if (jsonData.success !== undefined) {",
+                  "        pm.expect(jsonData.success).to.be.false;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Andrés Mendoza\",\n  \"cargo\": \"Developer\",\n  \"departamento\": \"TI\",\n  \"sueldo\": -200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Caso de prueba extraído del README:\n`sueldo: -200` viola la regla de valor no negativo (> 0).\n\nResultado esperado: `400 Bad Request` con lista estructurada de campos inválidos."
+          },
+          "response": []
+        },
+        {
+          "name": "03. Validación DTO - Campos Requeridos Faltantes (POST 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP 400 Bad Request",
+                  "pm.test(\"Servidor rechaza con 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validar detección de múltiples campos ausentes",
+                  "pm.test(\"Respuesta reporta campos ausentes requeridos\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const rawText = JSON.stringify(jsonData).toLowerCase();",
+                  "    pm.expect(rawText).to.satisfy(t => t.includes(\"cargo\") || t.includes(\"departamento\") || t.includes(\"sueldo\") || t.includes(\"required\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Mariana Gómez\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Envía un payload que carece de `cargo`, `departamento` y `sueldo`.\n\nResultado esperado: `400 Bad Request` señalando la obligatoriedad de los atributos faltantes."
+          },
+          "response": []
+        },
+        {
+          "name": "04. Validación DTO - Tipos de Datos Incorrectos (POST 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP 400 Bad Request",
+                  "pm.test(\"Servidor rechaza con 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "// Validar rechazo de tipos erróneos",
+                  "pm.test(\"Respuesta informa error de tipo de dato\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const rawText = JSON.stringify(jsonData).toLowerCase();",
+                  "    pm.expect(rawText).to.satisfy(t => t.includes(\"expected\") || t.includes(\"number\") || t.includes(\"string\") || t.includes(\"type\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Elena Torres\",\n  \"cargo\": 12345,\n  \"departamento\": true,\n  \"sueldo\": \"cinco mil\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}"
+              ]
+            },
+            "description": "Envía valores con tipos incompatibles (`cargo` numérico, `departamento` booleano, `sueldo` como texto).\n\nResultado esperado: `400 Bad Request` indicando falla en la coerción de tipos."
+          },
+          "response": []
+        },
+        {
+          "name": "05. Validación Perimetral - ID Inexistente (GET 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP 404 Not Found",
+                  "pm.test(\"Servidor retorna 404 Not Found para ID inexistente\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "// Validar formato Response Wrapper de error",
+                  "pm.test(\"Respuesta unificada de error (Response Wrapper)\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.success !== undefined) {",
+                  "        pm.expect(jsonData.success).to.be.false;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{invalidEmployeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{invalidEmployeeId}}"
+              ]
+            },
+            "description": "Envía un ObjectId de 24 caracteres hexadecimales sintácticamente válido que no existe en MongoDB (`60c72b2f9b1d8b2bad000000`).\n\nResultado esperado: `404 Not Found` en lugar de una excepción no controlada o 500."
+          },
+          "response": []
+        },
+        {
+          "name": "06. Validación Perimetral - ID Malformado (GET 400/404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar que el servidor proteja la aplicación ante identificadores con formato corrupto",
+                  "pm.test(\"Servidor responde con 400 Bad Request o 404 Not Found (sin crashear con 500)\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{malformedEmployeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{malformedEmployeeId}}"
+              ]
+            },
+            "description": "Envía una cadena de texto corrupta (`id-invalido-123`) como parámetro de ruta.\n\nResultado esperado: El esquema Zod de `req.params` o el manejador global de errores debe interceptarlo con `400 Bad Request` o `404 Not Found` sin exponer trazas crudas del sistema (`500 Internal Server Error`)."
+          },
+          "response": []
+        },
+        {
+          "name": "07. Validación DTO - Actualización con Datos Inválidos (PUT 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar código HTTP 400 Bad Request",
+                  "pm.test(\"Servidor rechaza mutación inválida con 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sueldo\": -500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{employeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{employeeId}}"
+              ]
+            },
+            "description": "Intenta una mutación parcial con valor de sueldo negativo en una entidad existente.\n\nResultado esperado: `400 Bad Request` protegiendo la consistencia de datos."
+          },
+          "response": []
+        },
+        {
+          "name": "08. Validación Perimetral - Eliminación con ID Malformado (DELETE 400/404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Validar respuesta defensiva ante eliminación con identificador erróneo",
+                  "pm.test(\"Servidor responde con 400 o 404 ante ID no válido\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/{{resource}}/{{malformedEmployeeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "{{resource}}",
+                "{{malformedEmployeeId}}"
+              ]
+            },
+            "description": "Intenta eliminar un empleado utilizando un identificador sintácticamente inválido.\n\nResultado esperado: Respuesta defensiva controlada `400 Bad Request` o `404 Not Found`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Pruebas de Contrato en Inglés (/api/v1/employees)",
+      "description": "Colección de compatibilidad con la ruta `/employees` estipulada en la sección 'Validación de Contratos (Pruebas de Caja Negra)' del `README.md`.",
+      "item": [
+        {
+          "name": "01. Crear Empleado (POST /employees - Contrato README)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Estado HTTP es 200 OK o 201 Created\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Type es application/json\", function () {",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Andrés Mendoza\",\n  \"cargo\": \"Arquitecto de Software\",\n  \"departamento\": \"Innovación\",\n  \"sueldo\": 4500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "employees"
+              ]
+            },
+            "description": "Petición idéntica a la especificada en `code/README.md` bajo `/api/v1/employees`."
+          },
+          "response": []
+        },
+        {
+          "name": "02. Listar Empleados (GET /employees)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Estado HTTP es 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "employees"
+              ]
+            },
+            "description": "Listar empleados utilizando la ruta en inglés `/api/v1/employees`."
+          },
+          "response": []
+        },
+        {
+          "name": "03. Inyección Inválida - Activación del DTO (POST /employees - Contrato README)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Estado HTTP es 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"JSON estructurado con lista de campos inválidos\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an(\"object\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"An\",\n  \"cargo\": \"Developer\",\n  \"departamento\": \"TI\",\n  \"sueldo\": -200\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiVersion}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "{{apiVersion}}",
+                "employees"
+              ]
+            },
+            "description": "Petición de inyección inválida tal como se documenta en el README:\n```http\nPOST http://localhost:3000/api/v1/employees\nContent-Type: application/json\n\n{\n  \"nombre\": \"An\",\n  \"cargo\": \"Developer\",\n  \"departamento\": \"TI\",\n  \"sueldo\": -200\n}\n```"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
