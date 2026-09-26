@@ -30,6 +30,8 @@ jobs:
 
       - name: Build Angular
         working-directory: ./frontend
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: npm run build
 
       - name: Upload Angular artifact
