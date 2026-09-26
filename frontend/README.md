@@ -1,6 +1,6 @@
 # Frontend - Retos 3 y 4
 
-Aplicacion Angular 20 para gestionar empleados consumiendo la API REST del backend en `http://localhost:3000/api/v1/employees`.
+Aplicacion Angular 20 para gestionar empleados consumiendo la API REST del backend configurada por entorno.
 
 ## Reto 3: Programacion reactiva e inmutabilidad
 
@@ -20,6 +20,34 @@ Archivos principales:
 - `src/app/services/employee.service.ts`
 - `src/app/models/employee.model.ts`
 - `src/app/app.component.ts`
+
+## Configuracion de API
+
+El frontend genera `src/environments/environment.ts` antes de `npm start`, `npm run build` o `npm run watch`.
+
+Variables soportadas:
+
+- `API_BASE_URL`
+- `API_URL`
+- `NG_APP_API_BASE_URL`
+
+Ejemplo local:
+
+```bash
+API_BASE_URL=http://3.151.244.205:3000/api/v1 npm run build
+```
+
+Ejemplo para GitHub Actions:
+
+```yaml
+- name: Build frontend
+  working-directory: frontend
+  env:
+    API_BASE_URL: ${{ secrets.API_BASE_URL }}
+  run: npm ci && npm run build
+```
+
+La URL debe apuntar al prefijo de la API, por ejemplo `http://3.151.244.205:3000/api/v1`. Si accidentalmente termina en `/employees`, el script la normaliza antes de compilar.
 
 ## Reto 4: Componentes Smart vs Dumb
 

@@ -13,6 +13,7 @@
     <app-employee-form
       [employee]="selectedEmployee"
       [loading]="(loading$ | async) ?? false"
+      [error]="(error$ | async) ?? null"
       (save)="saveEmployee($event)"
       (cancel)="clearSelection()"
     />

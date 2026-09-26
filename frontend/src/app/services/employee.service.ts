@@ -1,13 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, finalize, map, Observable, switchMap } from 'rxjs';
+import { environment } from '../../environments/environment';
 import type { ApiResponse, Employee, EmployeePayload } from '../models/employee.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EmployeeService {
-  private readonly apiUrl = 'http://localhost:3000/api/v1/employees';
+  private readonly apiUrl = `${environment.apiBaseUrl}/employees`;
 
   private readonly employeesSubject = new BehaviorSubject<ReadonlyArray<Employee>>([]);
   private readonly loadingSubject = new BehaviorSubject<boolean>(false);
@@ -88,11 +89,39 @@ export class EmployeeService {
 
   private readErrorMessage(error: unknown): string {
     if (typeof error === 'object' && error !== null && 'error' in error) {
-      const httpError = error as { error?: { message?: string } };
-      return httpError.error?.message ?? 'No se pudo completar la operacion solicitada';
+      const httpError = error as { error?: ApiResponse<null> };
+      const response = httpError.error;
+      const message = response?.message ?? 'No se pudo completar la operacion solicitada';
+      const details = this.formatErrorDetails(response?.error?.details);
+
+      return details ? `${message}: ${details}` : message;
     }
 
     return 'No se pudo completar la operacion solicitada';
+  }
+
+  private formatErrorDetails(details: unknown): string {
+    if (!Array.isArray(details)) {
+      return '';
+    }
+
+    return details
+      .map(detail => {
+        if (!this.isRecord(detail)) {
+          return '';
+        }
+
+        const field = this.toText(detail['field']);
+        const message = this.toText(detail['message']);
+
+        if (!message) {
+          return '';
+        }
+
+        return field ? `${field}: ${message}` : message;
+      })
+      .filter(Boolean)
+      .join('; ');
   }
 
   private normalizeEmployees(data: unknown): ReadonlyArray<Employee> {

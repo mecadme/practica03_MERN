@@ -31,8 +31,6 @@ export class AppComponent implements OnInit {
     } else {
       this.employeeService.createEmployee(event.payload);
     }
-
-    this.clearSelection();
   }
 
   editEmployee(employee: Employee): void {

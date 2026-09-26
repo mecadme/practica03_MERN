@@ -38,6 +38,27 @@ input:focus {
   border-color: #1e6fd6;
 }
 
+input.invalid {
+  border-color: #b42318;
+  background: #fff8f7;
+}
+
+.field-error {
+  color: #b42318;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.alert {
+  border: 1px solid #f4b4ac;
+  border-radius: 8px;
+  padding: 12px;
+  color: #8a1f16;
+  background: #fff1f0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .actions {
   display: flex;
   gap: 10px;

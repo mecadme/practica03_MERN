@@ -1,29 +1,101 @@
-<form class="panel form-panel" (ngSubmit)="submit()" #employeeForm="ngForm">
+<form class="panel form-panel" (ngSubmit)="submit(employeeForm)" #employeeForm="ngForm">
   <h2>{{ editingId ? 'Editar empleado' : 'Nuevo empleado' }}</h2>
+
+  <div class="alert" *ngIf="error && saveFailed">
+    {{ error }}
+  </div>
 
   <label>
     Nombre
-    <input name="nombre" type="text" [(ngModel)]="form.nombre" required minlength="3" maxlength="100">
+    <input
+      name="nombre"
+      type="text"
+      [(ngModel)]="form.nombre"
+      #nombre="ngModel"
+      required
+      minlength="3"
+      maxlength="100"
+      [class.invalid]="nombre.invalid && (nombre.touched || submitted)"
+    >
+    <small class="field-error" *ngIf="nombre.errors?.['required'] && (nombre.touched || submitted)">
+      El nombre es requerido.
+    </small>
+    <small class="field-error" *ngIf="nombre.errors?.['minlength'] && (nombre.touched || submitted)">
+      El nombre debe tener al menos 3 caracteres.
+    </small>
+    <small class="field-error" *ngIf="nombre.errors?.['maxlength'] && (nombre.touched || submitted)">
+      El nombre no puede exceder 100 caracteres.
+    </small>
   </label>
 
   <label>
     Cargo
-    <input name="cargo" type="text" [(ngModel)]="form.cargo" required minlength="2" maxlength="100">
+    <input
+      name="cargo"
+      type="text"
+      [(ngModel)]="form.cargo"
+      #cargo="ngModel"
+      required
+      minlength="2"
+      maxlength="100"
+      [class.invalid]="cargo.invalid && (cargo.touched || submitted)"
+    >
+    <small class="field-error" *ngIf="cargo.errors?.['required'] && (cargo.touched || submitted)">
+      El cargo es requerido.
+    </small>
+    <small class="field-error" *ngIf="cargo.errors?.['minlength'] && (cargo.touched || submitted)">
+      El cargo debe tener al menos 2 caracteres.
+    </small>
+    <small class="field-error" *ngIf="cargo.errors?.['maxlength'] && (cargo.touched || submitted)">
+      El cargo no puede exceder 100 caracteres.
+    </small>
   </label>
 
   <label>
     Departamento
-    <input name="departamento" type="text" [(ngModel)]="form.departamento" required minlength="2" maxlength="100">
+    <input
+      name="departamento"
+      type="text"
+      [(ngModel)]="form.departamento"
+      #departamento="ngModel"
+      required
+      minlength="2"
+      maxlength="100"
+      [class.invalid]="departamento.invalid && (departamento.touched || submitted)"
+    >
+    <small class="field-error" *ngIf="departamento.errors?.['required'] && (departamento.touched || submitted)">
+      El departamento es requerido.
+    </small>
+    <small class="field-error" *ngIf="departamento.errors?.['minlength'] && (departamento.touched || submitted)">
+      El departamento debe tener al menos 2 caracteres.
+    </small>
+    <small class="field-error" *ngIf="departamento.errors?.['maxlength'] && (departamento.touched || submitted)">
+      El departamento no puede exceder 100 caracteres.
+    </small>
   </label>
 
   <label>
     Sueldo
-    <input name="sueldo" type="number" [(ngModel)]="form.sueldo" required min="1">
+    <input
+      name="sueldo"
+      type="number"
+      [(ngModel)]="form.sueldo"
+      #sueldo="ngModel"
+      required
+      min="1"
+      [class.invalid]="sueldo.invalid && (sueldo.touched || submitted)"
+    >
+    <small class="field-error" *ngIf="sueldo.errors?.['required'] && (sueldo.touched || submitted)">
+      El sueldo es requerido.
+    </small>
+    <small class="field-error" *ngIf="sueldo.errors?.['min'] && (sueldo.touched || submitted)">
+      El sueldo debe ser mayor a cero.
+    </small>
   </label>
 
   <div class="actions">
-    <button type="submit" [disabled]="employeeForm.invalid || loading">
-      {{ editingId ? 'Guardar' : 'Crear' }}
+    <button type="submit" [disabled]="loading">
+      {{ loading ? 'Guardando...' : editingId ? 'Guardar' : 'Crear' }}
     </button>
     <button type="button" class="ghost" (click)="reset()" [disabled]="loading">
       Limpiar
