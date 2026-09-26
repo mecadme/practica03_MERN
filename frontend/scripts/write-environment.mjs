@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const defaultApiBaseUrl = 'http://3.151.244.205:3000/api/v1';
+const defaultApiBaseUrl = 'http://localhost:3000/api/v1';
 const rawApiBaseUrl = (
   process.env.API_BASE_URL ??
   process.env.API_URL ??
