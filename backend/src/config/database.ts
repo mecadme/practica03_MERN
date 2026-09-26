@@ -12,6 +12,12 @@ export const connectDatabase = async (): Promise<void> => {
     await mongoose.connect(MONGO_URI);
 
     console.log('Conectado correctamente a MongoDB');
+
+    console.log('==============================');
+    console.log('Mongo Host:', mongoose.connection.host);
+    console.log('Mongo DB:', mongoose.connection.name);
+    console.log('==============================');
+
   } catch (error) {
     console.error('Error al conectar con MongoDB:', error);
     process.exit(1);
