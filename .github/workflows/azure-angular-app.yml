@@ -54,6 +54,7 @@ jobs:
           path: ./angular-app
 
       - name: Login to Azure
+        if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -61,9 +62,13 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy Angular to Azure Web App
+        if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'angularApp'
           slot-name: 'Production'
           package: ./angular-app
 
+      - name: Skip deploy when Azure secrets are not configured
+        if: ${{ secrets.AZURE_CLIENT_ID == '' || secrets.AZURE_TENANT_ID == '' || secrets.AZURE_SUBSCRIPTION_ID == '' }}
+        run: echo "Azure OIDC secrets are not configured, skipping deploy."
