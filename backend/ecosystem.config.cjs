@@ -25,7 +25,7 @@ module.exports = {
       path: '/var/www/empleados-app/practica03_MERN',
       'post-deploy':
         'cd backend && mkdir -p logs && npm install && pm2 startOrReload ecosystem.config.cjs --env production && pm2 save',
-      ssh_options: 'IdentityFile=~/.ssh/tu-llave-aws.pem'
+      ssh_options: '/home/mcadme/.ssh/claveServer.pem'
     }
   }
 };
