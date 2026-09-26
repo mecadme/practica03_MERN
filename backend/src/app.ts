@@ -29,12 +29,12 @@ app.get('/', (_req, res) => {
             place-items: center;
             font-family: Arial, sans-serif;
             color: #172033;
-            background: #eef6ff;
+            background: #f2fbf7;
           }
 
           main {
             width: min(720px, calc(100% - 32px));
-            border: 1px solid #c8ddf3;
+            border: 1px solid #bfe8d4;
             border-radius: 8px;
             padding: 32px;
             background: #ffffff;
@@ -43,19 +43,31 @@ app.get('/', (_req, res) => {
 
           h1 {
             margin: 0 0 12px;
-            color: #1458a8;
+            color: #14724f;
           }
 
           p {
             margin: 0;
             line-height: 1.5;
           }
+
+          .badge {
+            display: inline-block;
+            margin-bottom: 16px;
+            border-radius: 999px;
+            padding: 6px 12px;
+            color: #0f5132;
+            background: #d8f3e5;
+            font-size: 0.82rem;
+            font-weight: 700;
+          }
         </style>
       </head>
       <body>
         <main>
-          <h1>Gestion de empleados desplegada</h1>
-          <p>Prueba visual CI/CD con PM2 Deploy desde la rama reto-3.</p>
+          <span class="badge">Deploy automatizado activo</span>
+          <h1>Gestion de empleados en produccion</h1>
+          <p>Segunda prueba visual con PM2 Deploy desde la rama reto-3.</p>
         </main>
       </body>
     </html>
