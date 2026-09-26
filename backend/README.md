@@ -5,7 +5,34 @@ API REST de empleados construida con Node.js, Express, TypeScript y MongoDB/Mong
 La API principal esta disponible en:
 
 ```text
-http://localhost:3000/api/v1/employees
+Base URL: http://localhost:3000/api/v1
+
+## Despliegue con PM2 en AWS
+
+El backend incluye `ecosystem.config.cjs` adaptado para esta API:
+
+- App PM2: `gestion-empleados-api`
+- Entrada: `src/index.ts`
+- Puerto: `3000`
+- Variable requerida: `MONGO_URI`
+- Host configurado: `3.151.244.205`
+
+En el servidor crea el archivo `backend/.env` con tu cadena real de MongoDB:
+
+```env
+MONGO_URI=mongodb+srv://usuario:password@cluster.mongodb.net/base
+PORT=3000
+```
+
+Para iniciar o recargar manualmente desde `backend`:
+
+```bash
+npm install
+npm run pm2:reload
+```
+
+Antes de usar `pm2 deploy`, cambia en `backend/ecosystem.config.cjs` los valores `repo` y `ssh_options` por tu repositorio y la ruta local de tu llave `.pem`.
+Recurso principal: /employees
 ```
 
 Tambien se mantienen rutas equivalentes bajo `/empleados` por compatibilidad.
