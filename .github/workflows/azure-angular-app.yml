@@ -31,7 +31,7 @@ jobs:
       - name: Build Angular
         working-directory: ./frontend
         env:
-          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          API_BASE_URL: https://3-151-244-205.sslip.io/api/v1
         run: npm run build
 
       - name: Upload Angular artifact
